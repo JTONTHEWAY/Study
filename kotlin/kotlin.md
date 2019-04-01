@@ -442,6 +442,252 @@ for ((index, value) in array.withIndex()) {
 //sampleEnd
 }
 ```
+## while 循环
+
+```
+while (x > 0) {
+    x--
+}
+do {
+  val y = retrieveData()
+} while (y != null)
+```
+
+## 循环中的break与continue
+
+### 返回和跳转
+kotlin 有三种结构化跳转表达式：
+- return 默认从最直接包围它的函数或者匿名函数返回
+- break 终止最直接包围它的循环。
+- continue 继续下一次最直接包围它的循环。
+
+所有这些表达式都可以用作更大表达式的一部分：
+```
+val s = person.name ?:return
+```
+
+## break与continue标签
+
+在kotlin中任何表达式都可以用标签(label)来标记。标签的格式为标识符后跟@符号，例如：abc@、foobar@都是有效的标签。要为一个表达式加标签，我们只要在其前加标签即可。
+```
+loop@ for(i in 1..100){}
+```
+现在，我们可以用标签限制break或者continue
+```
+loop@ for(i in 1.100){
+    for(j in 1..100){
+        if(....)break@loop
+    }
+}
+```
+标签限制的break跳转到刚好位于该标签指定的循环后面的执行点。continue继续标签指定的循环的下一次迭代。
+### 标签处返回
+
+kotlin有函数字面量、局部函数和对象表达式。因此kotlin的函数可以被嵌套。标签限制的return允许我们从外层函数返回。最重要的一个用途就是从lambda表达式中返回。
+```
+ public fun foo() {
+        listOf(1, 2, 3, 4).forEach {
+            if (it == 3) return
+            println(it)
+        }
+        println("this point is unreachable")
+    }
+
+    public fun foo1() {
+        listOf(1, 2, 3, 4).forEach lit@ {
+            if (it == 3) return@lit
+            println(it)
+        }
+        println("this point is unreachable")
+    }
+```
+这个 return 表达式从最直接包围它的函数即 foo 中返回。 (注意,这种非局部的返回只 支持传给内联函数的 lambda 表达式。) 如果我们需要从 lambda 表达式中返回,我们必须 给它加标签并用以限制 return 即foo1。
+
+现在，它只会从lambda表达式中返回。通常情况下使用隐式标签更方便。该标签与接受该lambda的函数同名。
+
+```
+fun foo() {
+listOf(1, 2, 3, 4, 5).forEach {
+if (it == 3) return@forEach // 局部返回到该 lambda 表达式的调用者,即 forEach 循环 print(it)
+}
+    print(" done with implicit label")
+}
+```
+或者，我们用一个匿名函数替代lambda表达式。匿名函数内部的return语句将从该匿名函数自身返回
+```
+public fun foo2() {
+        listOf(1, 2, 3, 5).forEach(fun(value:Int){
+            if (value == 3) return // 局部返回到匿名函数的调用者,即 forEach 循环 print(value)
+        })
+    }
+```
+请注意,前文三个示例中使用的局部返回类似于在常规循环中使用 continue 。并没有 break 的直接等价形式,不过可以通过增加另一层嵌套 lambda 表达式并从其中非局部返回
+来模拟
+```
+fun foo() {
+    run loop@{
+        listOf(1, 2, 3, 4, 5).forEach {
+if (it == 3) return@loop // 从传入 run 的 lambda 表达式非局部返回
+print(it) }
+}
+    print(" done with nested loop")
+}
+```
+当要返一个回值的时候,解析器优先选用标签限制的 return,即
+```
+ return@a 1
+```
+意为“从标签 @a 返回 1”,而不是“返回一个标签标注的表达式 (@a 1) ”。
+# 类与继承
+
+## 类
+Kotlin 中使用关键字 class 声明类
+
+### 构造函数
+在kotlin中的一个类可以有一个主构造函数以及一个或多个次构造函数。主构造函数是类头的一部分：它跟在类名(与可选的类型参数)后。
+```
+class person constructor(firstname:string){...}
+```
+如果主构造函数没有任何注解或者可见性修饰符,可以省略这个 constructor 关键字。
+```
+  class Person(firstName: String) { ... }
+```
+主构造函数不能包含任何的代码。初始化的代码可以放到以 init 关键字作为前缀的初始化 块(initializer blocks)中。
+在实例初始化期间,初始化块按照它们出现在类体中的顺序执行,与属性初始化器交织在一
+起:
+```
+class InitOrderDemo(name: String) {
+    val firstProperty = "First property: $name".also(::println)
+    init {
+        println("First initializer block that prints ${name}")
+}
+val secondProperty = "Second property: ${name.length}".also(::println)
+    init {
+        println("Second initializer block that prints ${name.length}")
+} }
+```
+请注意,主构造的参数可以在初始化块中使用。它们也可以在类体内声明的属性初始化器中
+使用:
+```
+class Customer(name: String) {
+    val customerKey = name.toUpperCase()
+}
+ 
+```
+事实上，声明属性以及从主构造函数初始化属性，kotlin有简洁的语法：
+```
+class Person(val firstName: String, val lastName: String, var age: Int) { ...... }
+```
+与普通属性一样,主构造函数中声明的属性可以是可变的( var )或只读的( val )。 如果构造函数有注解或可见性修饰符,这个 constructor 关键字是必需的,并且这些修饰符
+在它前面:
+```
+class Customer public @Inject constructor(name: String) { ...... }
+```
+### 次构造函数
+
+类也可以声明前缀有constructor的次构造函数：
+```
+class Person {
+    constructor(parent: Person) {
+        parent.children.add(this)
+    }
+}
+```
+如果类有一个主构造函数，每个次构造函数需要委托给主构造函数，可以直接委托或者通过别的次构造函数。委托到同一个类的另一个构造函数用this关键字即可
+```
+class Person(val name: String) {
+    constructor(name: String, parent: Person) : this(name) {
+        parent.children.add(this)
+    }
+}
+```
+请注意，初始化块中的代码实际上会成为主构造函数的一部分。委托给主构造函数会作为次构造函数的第一条语句，因此所有初始块中的代码都会在次构造函数之前执行，即使该类没有主构造函数，这种委托仍会隐式发生，并且仍会执行初始化块：
+```
+class Constructors {
+    init {
+        println("Init block")
+}
+    constructor(i: Int) {
+        println("Constructor")
+} }
+```
+如果一个非抽象类没有声明任何(主或次)构造函数,它会有一个生成的不带参数的主构造 函数。构造函数的可见性是 public。如果你不希望你的类有一个公有构造函数,你需要声明一个带有非默认可见性的空的主构造函数:
+```
+class DontCreateMe private constructor () { ... }
+```
+注意:在 JVM 上,如果主构造函数的所有的参数都有默认值,编译器会生成 一个额外 的无参构造函数,它将使用默认值。这使得 Kotlin 更易于使用像 Jackson 或者 JPA 这样 的通过无参构造函数创建类的实例的库。
+```
+class Customer(val customerName: String = "")
+```
+### 创建类的实例
+要创建一个类的实例，我们就像普通函数一样调用构造函数：
+```
+val invoice = Invoice()
+val customer = Customer("name")
+```
+注意kotlin并没有new关键字
+
+### 类成员
+类可以包含：
+- 构造函数与初始化块
+- 函数
+- 属性
+- 嵌套类与内部类
+- 对象声明
+
+### 继承
+
+在kotlin中所有类都有一个共同的超类Any，这对于没有超类型声明的类是默认超类：
+```
+class Example //从Any隐式继承
+```
+
+注意：any并不是java.lang.object；尤其是，它除了equal()、hashcode()与tostring()外没有任何成员。
+
+要声明一个显式的超类型，我们把类型放到类头的冒号之后：
+
+```
+open class Base(p:Int)
+class Derived(p:Int):Base(p)
+```
+如果派生类有一个主构造函数，其基类型可以（并且必须）用基类的主构造函数参数就地初始化。
+如果类没有主构造函数，那么每个次构造函数必须使用super关键字初始化其基类型，或委托另一个构造函数做到这一点。注意，这种情况下，不同的次构造函数可以调用基类型的不同构造函数：
+
+```
+class MyView :View{
+    constructor(ctx:Context):super(ctx)
+    constructor(ctx:Context,attrs:AttributeSet):super(ctx,attrs)
+}
+```
+### 覆盖方法
+我们之前提到过，kotlin力求清晰显式。与java不同，kotlin对于可覆盖的成员以及覆盖后的成员需要显式修饰符
+```
+open class Base{
+    open fun v(){..}
+    fun nv(){...}
+}
+class Derived():Base(){
+    override fun v(){...}
+}
+```
+Derived.v() 函数上必须加上 override 修饰符。如果没写,编译器将会报错。 如果函数没有 标注 open 如 Base.nv() ,那么子类中不允许定义相同签名的函数, 不论加不加 override。将 open 修饰符添加到 final 类(即没有 open 的类)的成员上不起作用。
+标记为 override 的成员本身是开放的,也就是说,它可以在子类中覆盖。如果你想禁止再 次覆盖,使用 final 关键字:
+```
+open class AnotherDerived():Base(){
+    final pverride fun v(){....}
+}
+```
+### 覆盖属性
+
+
+
+
+
+
+
+
+
+
 
 
 
